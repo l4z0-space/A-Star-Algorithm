@@ -7,10 +7,16 @@ using namespace std;
 int d1[8] = {1,1,1,-1,-1,-1,0,0};
 int d2[8] = {1,0,-1,1,0,-1,1,-1};
 
+struct Node;
 char Graph[100][100];
 int m, n;              // dimensions
 int startX, startY;
 int targetX, targetY;
+bool ClosedList [100][100];
+bool inOpenList [100][100];
+
+
+vector< vector <Node> > Parent;
 
 struct Node{
 
@@ -59,7 +65,7 @@ bool FOUND = 0;
 
 void Astar(Node start, Node target){
 
-    vector<Node> OpenList, ClosedList;
+    vector<Node> OpenList;
 
     OpenList.push_back(start);
 
@@ -79,10 +85,9 @@ void Astar(Node start, Node target){
 
         /* Remove currentNode and add it to ClosedList */
         OpenList.erase( OpenList.begin() + finalIndex );
-        ClosedList.push_back(currNode);
 
-       /*  Mark in graph */
-        Graph[currNode.x][currNode.y] = 'x';
+        ClosedList[currNode.x][currNode.y] = true;
+        inOpenList[currNode.x][currNode.y] = true;
 
         /* Check if found the target */
         if( currNode == target ){
@@ -100,20 +105,22 @@ void Astar(Node start, Node target){
             // check if valid
             if(nX < 0 || nY < 0 || nX >= n || nY >= m || Graph[nX][nY] == '1' )
                 continue;
+
             Node nextNode(nX,nY); // neighbor
             Neighbors.push_back(nextNode);
+
+            // IMPORTANT CHECK
+            if(Parent[nX][nY] == nextNode )
+                Parent[nX][nY] = currNode;
         }
 
         for( Node& someNode : Neighbors ){
 
             bool ok = 1;
             //  Ignore if in the ClosedList
-            for ( Node& closedNode : ClosedList){
-                if( closedNode == someNode ){
-                    ok=0;
-                    break;
-                }
-            }
+
+            if(ClosedList[someNode.x][someNode.y])continue;
+
             if(!ok)continue;
             // Calculate G,H,F
             someNode.G = currNode.G + 1;
@@ -121,27 +128,32 @@ void Astar(Node start, Node target){
             someNode.F = someNode.G + someNode.H;
 
             // Check if already in the OpenList
-            bool InOpenList = 0;
+            bool noAdd = 0;
             for( Node& openNode : OpenList ){
 
                 // not worthed adding to OpenList
                 if( openNode == someNode && openNode.G < someNode.G ){
-                    InOpenList = 1;
+                    noAdd = 1;
                     break;
                 }
             }
-            if( !InOpenList )
+            if( !noAdd )
                 OpenList.push_back(someNode);
         }
     }
 }
 
+void colorShortest(Node current, Node start){
+    Graph[current.x][current.y] = 'x';
 
+    if(current == start) return ;
+    else colorShortest( Parent[current.x][current.y] , start);
+}
 
 int main() {
 
-    // freopen("input.txt","r",stdin);
-
+    freopen("input.txt","r",stdin);
+    freopen("output.txt","w",stdout);
     cin >> n >> m;
 
     cin >> startX >> startY;
@@ -154,19 +166,30 @@ int main() {
     Node start(startX, startY);
     Node target(targetX, targetY);
 
+    for(int i=0;i<n;i++){
+        vector<Node> toAdd;
+        for( int j=0;j<m;j++){
+                toAdd.push_back(Node(i,j));
+        }
+        Parent.push_back(toAdd);
+    }
     /* Call the function here. */
     Astar(start,target);
 
-    if(!FOUND){
-        cout<< " > Path doesn't exist!\n";
+    if( !FOUND ){
+        cout << " > Path doesn't exist!\n";
         return 0;
     }
 
+    colorShortest(target,start);
+
     cout<<"\n\n > Path shown below...\n\n";
+
     Graph[start.x][start.y] = 's';
     Graph[target.x][target.y] = 'e';
+
     for(int i = 0 ; i < n ; i++ ){
-        for(int j = 0; j < m; j++ ){
+        for(int j = 0; j < m ; j++ ){
             cout << Graph[i][j] << " ";
         }
         cout << endl;
